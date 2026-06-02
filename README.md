@@ -71,34 +71,34 @@ MyProjectDockerM169/
 Die `db/init.sql` erstellt beim ersten Start **drei Tabellen**:
 
 #### Tabelle `kunden`
-Speichert die eindeutigen Stammdaten der Benutzer/Kunden.
+Diese Tabelle speichert die eindeutigen Stammdaten der Benutzer/Kunden.
 
 | Spalte | Typ | Beschreibung |
 |--------|-----|--------------|
-| `kunde_id` | `INT AUTO_INCREMENT` | Primärschlüssel |
-| `name` | `VARCHAR(100)` | Vor- und Nachname des Kunden |
-| `lieferadresse` | `TEXT` | Vollständige Versandadresse (Strasse, PLZ, Ort) |
+| `kunde_id` | `INT AUTO_INCREMENT` | Eindeutige Kundennummer (wird automatisch hochgezählt). |
+| `name` | `VARCHAR(100)` | Vor- und Nachname des Kunden. |
+| `lieferadresse` | `TEXT` | Vollständige Versandadresse (Strasse, PLZ, Ort). |
 
 #### Tabelle `artikel`
-Enthält das Produktsortiment mit den verfügbaren Varianten und Preisen.
+Diese Tabelle enthält das Produktsortiment (die bisherigen Excel-Stammdaten) mit den verfügbaren Varianten und Preisen.
 
 | Spalte | Typ | Beschreibung |
 |--------|-----|--------------|
-| `artikel_id` | `INT AUTO_INCREMENT` | Primärschlüssel |
-| `produkt_name` | `VARCHAR(100)` | Bezeichnung des Produkts |
-| `groesse` | `VARCHAR(10)` | Verfügbare Größe (z.B. S, M, L, XL) |
-| `farbe` | `VARCHAR(30)` | Farbe der Produktvariante |
-| `preis` | `DECIMAL(10, 2)` | Preis des Artikels |
+| `artikel_id` | `INT AUTO_INCREMENT` | Eindeutige Artikelnummer. |
+| `produkt_name` | `VARCHAR(100)` | Bezeichnung des Produkts. |
+| `groesse` | `VARCHAR(10)` | Verfügbare Grösse (z. B. S, M, L, XL). |
+| `farbe` | `VARCHAR(30)` | Farbe der jeweiligen Produktvariante. |
+| `preis` | `DECIMAL(10, 2)` | Preis des Artikels (z. B. 19.50). |
 
 #### Tabelle `bestellungen`
-Diese Transaktionstabelle verbindet über Fremdschlüssel die Kunden mit den bestellten Artikeln und hält den genauen Bestellzeitpunkt fest.
+Diese Transaktionstabelle verbindet über Fremdschlüssel (Foreign Keys) die Kunden mit den bestellten Artikeln und hält den genauen Bestellzeitpunkt fest.
 
 | Spalte | Typ | Beschreibung |
 |--------|-----|--------------|
-| `bestell_id` | `INT AUTO_INCREMENT` | Primärschlüssel |
-| `fk_kunde_id` | `INT` | Fremdschlüssel auf `kunden.kunde_id` |
-| `fk_artikel_id` | `INT` | Fremdschlüssel auf `artikel.artikel_id` |
-| `bestelldatum` | `TIMESTAMP` | Zeitstempel des Bestelleingangs |
+| `bestell_id` | `INT AUTO_INCREMENT` | Eindeutige Bestellnummer (wichtig für Testfall T-004). |
+| `fk_kunde_id` | `INT` | Verweist auf kunden.kunde_id (Wer hat bestellt?). |
+| `fk_artikel_id` | `INT` | Verweist auf artikel.artikel_id (Was wurde bestellt?). |
+| `bestelldatum` | `TIMESTAMP` | Datum und Uhrzeit des Bestelleingangs (automatisch). |
 
 ---
 
