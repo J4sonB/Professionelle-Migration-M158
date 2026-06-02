@@ -285,12 +285,7 @@
         <button class="tab-btn active" id="nav-home" onclick="switchTab('home', this)">Startseite</button>
         <button class="tab-btn" id="nav-shop" onclick="switchTab('shop', this)">Produkte</button>
         <button class="tab-btn" id="nav-cart" onclick="switchTab('cart', this)">Warenkorb <span id="cart-badge" style="display:none;background:var(--primary);border-radius:50%;padding:2px 6px;font-size:0.75rem;margin-left:5px;">0</span></button>
-        <button class="tab-btn" id="nav-login" onclick="switchTab('login', this)">Login</button>
         <button class="tab-btn" id="nav-contact" onclick="switchTab('contact', this)">Kontakt</button>
-        <div id="user-status" style="display:none;">
-            <span id="nav-username">👤</span>
-            <button class="logout-btn" onclick="logout()">Ausloggen</button>
-        </div>
     </nav>
 
     <div class="container">
@@ -315,40 +310,7 @@
             </div>
         </div>
 
-        <!-- LOGIN / REGISTER -->
-        <div id="login" class="tab-content">
-            <!-- Logged-out view -->
-            <div id="auth-form-wrap" class="auth-wrap">
-                <div class="auth-card">
-                    <h2>Konto</h2>
-                    <p class="sub">Logge dich ein. Wenn dein Konto nicht existiert, wird es automatisch erstellt.</p>
-                    <div class="form-group">
-                        <label>Benutzername</label>
-                        <input type="text" id="auth-username" placeholder="dein_username" autocomplete="username">
-                    </div>
-                    <div class="form-group">
-                        <label>Passwort</label>
-                        <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
-                    </div>
-                    <button class="submit-btn" id="auth-submit-btn" onclick="handleAuth()">Einloggen</button>
-                </div>
-            </div>
 
-            <!-- Logged-in view -->
-            <div id="logged-in-panel" class="user-panel" style="display:none;">
-                <div class="avatar" id="avatar-letter">J</div>
-                <h2>Hallo, <span id="panel-username">User</span>! 👋</h2>
-                <p>Du bist eingeloggt.</p>
-                <button class="submit-btn" onclick="loadLogs()" style="margin-bottom:1.5rem;">🔍 Login-Protokoll laden</button>
-                <div id="logs-container" style="display:none;">
-                    <h3 style="margin-bottom:1rem; color:#D8B4FE;">Letzte Login-Versuche</h3>
-                    <table class="logs-table">
-                        <thead><tr><th>Benutzer</th><th>Status</th><th>IP</th><th>Zeit</th></tr></thead>
-                        <tbody id="logs-body"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
 
         <!-- WARENKORB -->
         <div id="cart" class="tab-content">
@@ -382,11 +344,21 @@
                             <tbody id="cart-body"></tbody>
                         </table>
                         <div class="cart-footer">
-                            <div>
+                            <div style="flex:1;">
+                                <div class="form-group">
+                                    <label>Dein Name</label>
+                                    <input type="text" id="checkout-name" placeholder="Max Mustermann">
+                                </div>
+                                <div class="form-group">
+                                    <label>Lieferadresse</label>
+                                    <input type="text" id="checkout-adresse" placeholder="Musterstraße 1, 12345 Stadt">
+                                </div>
+                            </div>
+                            <div style="text-align: right; min-width: 200px;">
                                 <div class="cart-total-label">Gesamtbetrag</div>
                                 <div class="cart-total-amount" id="cart-total">€ 0,00</div>
+                                <button class="checkout-btn" id="cart-checkout-btn" onclick="checkout()" style="margin-top: 1rem; width: 100%;">Jetzt kaufen 🚀</button>
                             </div>
-                            <button class="checkout-btn" id="cart-checkout-btn" onclick="checkout()">Jetzt kaufen 🚀</button>
                         </div>
                     </div>
                 </div>
@@ -420,11 +392,6 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // ── State ────────────────────────────────────────────────────────────────
-        let currentToken = localStorage.getItem('token') || null;
-        let currentUser  = localStorage.getItem('username') || null;
-        let authMode = 'login';
-
         // ── Tabs ─────────────────────────────────────────────────────────────────
         function switchTab(tabId, btn) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -432,87 +399,7 @@
             document.getElementById(tabId).classList.add('active');
             if (btn) btn.classList.add('active');
             if (tabId === 'shop') fetchProducts();
-            if (tabId === 'login') refreshAuthView();
         }
-
-        // ── Auth UI ───────────────────────────────────────────────────────────────
-        function refreshAuthView() {
-            if (currentToken) {
-                document.getElementById('auth-form-wrap').style.display = 'none';
-                document.getElementById('logged-in-panel').style.display = 'block';
-                document.getElementById('panel-username').textContent = currentUser;
-                document.getElementById('avatar-letter').textContent = (currentUser || 'U')[0].toUpperCase();
-                document.getElementById('user-status').style.display = 'flex';
-                document.getElementById('nav-username').textContent = '👤 ' + currentUser;
-            } else {
-                document.getElementById('auth-form-wrap').style.display = 'block';
-                document.getElementById('logged-in-panel').style.display = 'none';
-                document.getElementById('user-status').style.display = 'none';
-            }
-        }
-
-        function setAuthMode(mode) {
-            // Veraltet, da Auto-Register aktiv ist
-        }
-
-        async function handleAuth() {
-            const username = document.getElementById('auth-username').value.trim();
-            const password = document.getElementById('auth-password').value;
-            const btn = document.getElementById('auth-submit-btn');
-            if (!username || !password) { showToast('Bitte alle Felder ausfüllen.', true); return; }
-            btn.disabled = true;
-            btn.textContent = 'Bitte warten...';
-            try {
-                const res = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await res.json();
-                if (!res.ok) { showToast(data.error || 'Fehler', true); return; }
-                showToast(data.message);
-                currentToken = data.token;
-                currentUser  = data.username;
-                localStorage.setItem('token', currentToken);
-                localStorage.setItem('username', currentUser);
-                refreshAuthView();
-            } catch { showToast('Netzwerkfehler', true); }
-            finally {
-                btn.disabled = false;
-                btn.textContent = 'Einloggen';
-            }
-        }
-
-        function logout() {
-            currentToken = null; currentUser = null;
-            localStorage.removeItem('token'); localStorage.removeItem('username');
-            document.getElementById('logs-container').style.display = 'none';
-            refreshAuthView();
-            showToast('Erfolgreich ausgeloggt.');
-            switchTab('home', document.getElementById('nav-home'));
-        }
-
-        async function loadLogs() {
-            try {
-                const res = await fetch('/api/auth/logs', { headers: { Authorization: 'Bearer ' + currentToken } });
-                if (!res.ok) { showToast('Fehler beim Laden der Logs', true); return; }
-                const logs = await res.json();
-                const tbody = document.getElementById('logs-body');
-                tbody.innerHTML = logs.map(l => `
-                    <tr>
-                        <td>${l.username}</td>
-                        <td><span class="badge ${l.success ? 'ok' : 'fail'}">${l.success ? '✓ Erfolg' : '✗ Fehlschlag'}</span></td>
-                        <td>${l.ip_address || '-'}</td>
-                        <td>${new Date(l.logged_at).toLocaleString('de-DE')}</td>
-                    </tr>`).join('');
-                document.getElementById('logs-container').style.display = 'block';
-            } catch { showToast('Netzwerkfehler', true); }
-        }
-
-        // Allow Enter key in auth form
-        ['auth-username','auth-password'].forEach(id => {
-            document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') handleAuth(); });
-        });
 
         // ── Contact ───────────────────────────────────────────────────────────────
         function handleContact(e) { e.preventDefault(); showToast('Nachricht gesendet! (Demo)'); e.target.reset(); }
@@ -528,15 +415,10 @@
         // ── Shop ─────────────────────────────────────────────────────────────────
         const grid = document.getElementById('product-grid');
         function formatPrice(p) { return parseFloat(p).toLocaleString('de-DE',{style:'currency',currency:'EUR'}); }
-        function renderStock(s) {
-            if (s <= 0) return `<span class="stock-dot out"></span> Ausverkauft`;
-            if (s <= 10) return `<span class="stock-dot low"></span> Nur noch ${s} auf Lager`;
-            return `<span class="stock-dot"></span> ${s} auf Lager`;
-        }
 
         async function fetchProducts() {
             try {
-                const res = await fetch('/api/products');
+                const res = await fetch('/api/artikel');
                 if (!res.ok) throw new Error();
                 const products = await res.json();
                 grid.innerHTML = '';
@@ -545,11 +427,11 @@
                     const card = document.createElement('div');
                     card.className = 'card';
                     card.innerHTML = `
-                        <h2>${p.name}</h2>
-                        <div class="price">${formatPrice(p.price)}</div>
-                        <div class="stock" id="stock-${p.id}">${renderStock(p.stock)}</div>
-                        <button class="buy-btn" onclick="addToCart(${p.id}, '${p.name.replace(/'/g, "\\'")}', ${p.price}, ${p.stock})" ${p.stock<=0?'disabled':''}>
-                            ${p.stock<=0?'Ausverkauft':'In den Warenkorb'}
+                        <h2>${p.produkt_name}</h2>
+                        <div style="color:var(--text-muted); margin-bottom: 0.5rem;">Größe: ${p.groesse} | Farbe: ${p.farbe}</div>
+                        <div class="price">${formatPrice(p.preis)}</div>
+                        <button class="buy-btn" onclick="addToCart(${p.artikel_id}, '${p.produkt_name.replace(/'/g, "\\'")}', ${p.preis})">
+                            In den Warenkorb
                         </button>`;
                     grid.appendChild(card);
                 });
@@ -569,16 +451,12 @@
             }
         }
 
-        function addToCart(id, name, price, maxStock) {
+        function addToCart(id, name, price) {
             const existing = cart.find(item => item.id === id);
             if (existing) {
-                if (existing.quantity >= maxStock) {
-                    showToast('Maximaler Bestand erreicht', true);
-                    return;
-                }
                 existing.quantity++;
             } else {
-                cart.push({ id, name, price, quantity: 1, maxStock });
+                cart.push({ id, name, price, quantity: 1 });
             }
             updateCartBadge();
             renderCart();
@@ -632,8 +510,6 @@
             const newQty = item.quantity + delta;
             if (newQty <= 0) {
                 removeFromCart(id);
-            } else if (newQty > item.maxStock) {
-                showToast('Maximaler Bestand erreicht', true);
             } else {
                 item.quantity = newQty;
                 updateCartBadge();
@@ -643,6 +519,15 @@
 
         async function checkout() {
             if (cart.length === 0) return;
+            
+            const name = document.getElementById('checkout-name').value.trim();
+            const lieferadresse = document.getElementById('checkout-adresse').value.trim();
+            
+            if (!name || !lieferadresse) {
+                showToast('Bitte Name und Lieferadresse angeben!', true);
+                return;
+            }
+
             const btn = document.getElementById('cart-checkout-btn');
             btn.disabled = true;
             btn.textContent = 'Wird verarbeitet...';
@@ -651,7 +536,7 @@
                 const res = await fetch('/api/checkout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cart: cart.map(i => ({ id: i.id, quantity: i.quantity })) })
+                    body: JSON.stringify({ name, lieferadresse, cart: cart.map(i => ({ id: i.id, quantity: i.quantity })) })
                 });
                 const data = await res.json();
                 if (!res.ok) {
@@ -664,7 +549,9 @@
                 cart = [];
                 updateCartBadge();
                 renderCart();
-                fetchProducts(); // Refresh stock
+                fetchProducts(); 
+                document.getElementById('checkout-name').value = '';
+                document.getElementById('checkout-adresse').value = '';
                 btn.disabled = false;
                 btn.textContent = 'Jetzt kaufen';
             } catch (err) {
@@ -690,7 +577,6 @@
 
         // ── Init ──────────────────────────────────────────────────────────────────
         fetchProducts();
-        refreshAuthView();
     </script>
 </body>
 </html>
