@@ -181,6 +181,86 @@
         }
         .contact-form h2 { margin-bottom: 2rem; font-size: 2rem; text-align: center; color: #D8B4FE; }
 
+        /* Cart */
+        .cart-wrap {
+            max-width: 860px; margin: 0 auto;
+        }
+        .cart-header {
+            text-align: center; margin-bottom: 2.5rem;
+        }
+        .cart-header h1 {
+            font-size: 2.5rem; font-weight: 800;
+            background: linear-gradient(to right, #D8B4FE, #A855F7);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .cart-header p { color: var(--text-muted); margin-top: 0.5rem; }
+        .cart-empty-state {
+            text-align: center; padding: 4rem 2rem;
+            background: var(--card-bg); backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border); border-radius: 1.5rem;
+        }
+        .cart-empty-state .empty-icon { font-size: 4rem; margin-bottom: 1rem; }
+        .cart-empty-state p { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 2rem; }
+        .cart-items-card {
+            background: var(--card-bg); backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border); border-radius: 1.5rem;
+            overflow: hidden;
+        }
+        .cart-table { width: 100%; border-collapse: collapse; }
+        .cart-table thead tr {
+            border-bottom: 1px solid var(--card-border);
+        }
+        .cart-table th {
+            padding: 1rem 1.25rem; text-align: left;
+            color: var(--text-muted); font-size: 0.85rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .cart-table td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            vertical-align: middle;
+        }
+        .cart-table tbody tr:last-child td { border-bottom: none; }
+        .cart-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+        .cart-product-name { font-weight: 600; font-size: 1rem; }
+        .qty-controls {
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .qty-btn {
+            background: rgba(147,51,234,0.15); border: 1px solid rgba(147,51,234,0.4);
+            color: #D8B4FE; width: 30px; height: 30px; border-radius: 6px;
+            cursor: pointer; font-size: 1rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .qty-btn:hover { background: rgba(147,51,234,0.35); transform: scale(1.1); }
+        .qty-value { min-width: 28px; text-align: center; font-weight: 600; }
+        .remove-btn {
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+            color: #FCA5A5; padding: 0.35rem 0.75rem; border-radius: 6px;
+            cursor: pointer; font-size: 0.8rem; font-weight: 600;
+            transition: background 0.2s;
+        }
+        .remove-btn:hover { background: rgba(239,68,68,0.3); }
+        .cart-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1.5rem 1.25rem; border-top: 1px solid var(--card-border);
+            background: rgba(0,0,0,0.2); flex-wrap: wrap; gap: 1rem;
+        }
+        .cart-total-label { color: var(--text-muted); font-size: 0.9rem; }
+        .cart-total-amount {
+            font-size: 2rem; font-weight: 800; color: #D8B4FE;
+        }
+        .checkout-btn {
+            background: linear-gradient(135deg, var(--primary), #A855F7);
+            color: white; border: none; border-radius: 0.75rem;
+            padding: 0.9rem 2.5rem; font-size: 1.1rem; font-weight: 800;
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 20px -5px rgba(147,51,234,0.5);
+        }
+        .checkout-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 25px -5px rgba(147,51,234,0.7); }
+        .checkout-btn:disabled { background: #334155; color: #94A3B8; cursor: not-allowed; box-shadow: none; transform: none; }
+
         /* Animations */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -266,6 +346,49 @@
                         <thead><tr><th>Benutzer</th><th>Status</th><th>IP</th><th>Zeit</th></tr></thead>
                         <tbody id="logs-body"></tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- WARENKORB -->
+        <div id="cart" class="tab-content">
+            <div class="cart-wrap">
+                <div class="cart-header">
+                    <h1>🛒 Dein Warenkorb</h1>
+                    <p>Überprüfe deine Artikel und gehe zur Kasse.</p>
+                </div>
+
+                <!-- Leer-Zustand -->
+                <div id="cart-empty" class="cart-empty-state">
+                    <div class="empty-icon">🛍️</div>
+                    <p>Dein Warenkorb ist noch leer.</p>
+                    <button class="cta-btn" onclick="switchTab('shop', document.getElementById('nav-shop'))"
+                        style="font-size:1rem;padding:0.75rem 2rem;">Jetzt einkaufen</button>
+                </div>
+
+                <!-- Artikel-Liste -->
+                <div id="cart-items" style="display:none;">
+                    <div class="cart-items-card">
+                        <table class="cart-table">
+                            <thead>
+                                <tr>
+                                    <th>Produkt</th>
+                                    <th>Menge</th>
+                                    <th>Einzelpreis</th>
+                                    <th>Gesamt</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="cart-body"></tbody>
+                        </table>
+                        <div class="cart-footer">
+                            <div>
+                                <div class="cart-total-label">Gesamtbetrag</div>
+                                <div class="cart-total-amount" id="cart-total">€ 0,00</div>
+                            </div>
+                            <button class="checkout-btn" id="cart-checkout-btn" onclick="checkout()">Jetzt kaufen 🚀</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -486,15 +609,17 @@
                 total += itemTotal;
                 return `
                     <tr>
-                        <td>${item.name}</td>
+                        <td><span class="cart-product-name">${item.name}</span></td>
                         <td>
-                            <button onclick="changeQuantity(${item.id}, -1)" style="background:transparent;border:1px solid var(--card-border);color:white;padding:2px 8px;border-radius:4px;cursor:pointer;">-</button>
-                            <span style="margin:0 8px;">${item.quantity}</span>
-                            <button onclick="changeQuantity(${item.id}, 1)" style="background:transparent;border:1px solid var(--card-border);color:white;padding:2px 8px;border-radius:4px;cursor:pointer;">+</button>
+                            <div class="qty-controls">
+                                <button class="qty-btn" onclick="changeQuantity(${item.id}, -1)">−</button>
+                                <span class="qty-value">${item.quantity}</span>
+                                <button class="qty-btn" onclick="changeQuantity(${item.id}, 1)">+</button>
+                            </div>
                         </td>
                         <td>${formatPrice(item.price)}</td>
-                        <td>${formatPrice(itemTotal)}</td>
-                        <td><button class="logout-btn" onclick="removeFromCart(${item.id})">Entfernen</button></td>
+                        <td style="font-weight:700;color:#D8B4FE;">${formatPrice(itemTotal)}</td>
+                        <td><button class="remove-btn" onclick="removeFromCart(${item.id})">✕ Entfernen</button></td>
                     </tr>
                 `;
             }).join('');

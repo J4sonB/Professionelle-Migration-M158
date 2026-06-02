@@ -10,7 +10,7 @@ Das Projekt basiert auf einer **Microservices-Architektur**, die vollständig ü
 
 1. **Frontend (Nginx)**: Liefert die Webseite aus und dient als "Reverse Proxy".
 2. **Backend (Node.js)**: Verarbeitet die Geschäftslogik (APIs) und spricht mit der Datenbank.
-3. **Datenbank (MySQL)**: Speichert Artikel und Bestände persistent ab.
+3. **Datenbank (MySQL)**: Speichert Artikel, Benutzer und Login-Protokolle persistent ab.
 4. **Cloudflare Tunnel**: Stellt das lokale Setup weltweit über eine sichere, dynamische URL zur Verfügung.
 
 ---
@@ -23,9 +23,10 @@ Ursprünglich war das Projekt für PostgreSQL konfiguriert. Wir haben dies volls
 - **Initialisierung:** Die Datei `db/init.sql` wurde mit MySQL-Syntax ausgestattet (z. B. `AUTO_INCREMENT` statt `SERIAL`, `INSERT IGNORE` statt `ON CONFLICT`).
 
 ### Tabellen-Struktur
-In der `init.sql` werden beim ersten Start zwei Tabellen erstellt:
-- `app_users`: Beinhaltet Benutzer (z.B. admin).
-- `products`: Speichert die Shop-Artikel (`id`, `name`, `price`, `stock`). Hier haben wir zum Start 4 Demo-Artikel mit Lagerbeständen eingefügt.
+In der `init.sql` werden beim ersten Start drei Tabellen erstellt:
+- **`app_users`**: Speichert registrierte Benutzer mit gehashtem Passwort (`id`, `username`, `password_hash`, `created_at`).
+- **`login_logs`**: Protokolliert alle Login-Versuche mit Erfolgs-/Fehlerstatus, IP-Adresse und Zeitstempel.
+- **`products`**: Speichert die Shop-Artikel (`id`, `name`, `price`, `stock`). Hier haben wir zum Start 4 Demo-Artikel mit Lagerbeständen eingefügt.
 
 ---
 
@@ -33,10 +34,20 @@ In der `init.sql` werden beim ersten Start zwei Tabellen erstellt:
 
 Um sicher mit der Datenbank zu kommunizieren, wurde ein eigener Container im Ordner `backend/` geschaffen.
 
-- **Stack:** Node.js, Express.js (Web-Framework), `mysql2` (Datenbanktreiber).
-- **APIs:**
-  - `GET /api/products`: Holt alle Artikel aus der MySQL-Tabelle und gibt sie als JSON ans Frontend.
-  - `POST /api/buy/:id`: Prüft den aktuellen Lagerbestand. Wenn Vorrat da ist, wird der `stock` in der Datenbank um 1 reduziert. Es werden sichere Transaktionen genutzt, um Fehler zu vermeiden.
+- **Stack:** Node.js, Express.js (Web-Framework), `mysql2` (Datenbanktreiber), `bcryptjs` (Passwort-Hashing), `jsonwebtoken` (JWT-Authentifizierung).
+
+### API-Endpunkte
+
+| Methode | Endpunkt | Beschreibung |
+|---------|----------|--------------|
+| `POST` | `/api/auth/login` | **Auto-Register & Login** – Existiert der Benutzer nicht, wird automatisch ein Konto erstellt. Gibt ein JWT-Token zurück. |
+| `POST` | `/api/auth/register` | Klassische Registrierung (separater Endpunkt). |
+| `GET` | `/api/auth/me` | Gibt die Benutzerdaten des eingeloggten Users zurück (geschützt per JWT). |
+| `GET` | `/api/auth/logs` | Lädt die letzten 50 Login-Versuche aller Benutzer (geschützt per JWT). |
+| `GET` | `/api/products` | Holt alle Artikel aus der MySQL-Tabelle und gibt sie als JSON ans Frontend. |
+| `POST` | `/api/buy/:id` | Kauft ein einzelnes Produkt – reduziert den Bestand um 1 (mit Transaktion). |
+| `POST` | `/api/checkout` | **Warenkorb-Checkout** – Verarbeitet einen kompletten Warenkorb mit mehreren Artikeln und Mengen in einer einzigen Transaktion. Prüft den Bestand für jedes Produkt vorab. |
+
 - **Dockerisierung:** Ein eigenes `Dockerfile` installiert die Abhängigkeiten (`package.json`) und startet den Node-Server auf Port `3000`.
 
 ---
@@ -53,15 +64,39 @@ Nginx ist das Tor zum System. In der `nginx/default.conf` haben wir Nginx zwei A
 
 Die `frontend/index.html` wurde zu einer interaktiven SPA (Single-Page Application) im modernen Design umgeschrieben.
 
+### Tab-Navigation
+Die Anwendung besteht aus fünf Bereichen, zwischen denen per Tab-Navigation gewechselt wird:
+
+| Tab | Beschreibung |
+|-----|--------------|
+| **Startseite** | Hero-Bereich mit Willkommensnachricht und CTA-Button zum Shop. |
+| **Produkte** | Dynamisch geladene Produktkarten mit Preis, Lagerbestand und „In den Warenkorb"-Button. |
+| **Warenkorb** | Auflistung aller Artikel im Warenkorb mit Mengensteuerung (+/−), Einzelpreis, Gesamtpreis pro Artikel, Gesamtbetrag und Checkout-Button. |
+| **Login** | Auto-Register-Formular – existiert der Benutzer nicht, wird automatisch ein Konto erstellt. Nach dem Login: Benutzer-Panel mit Login-Protokoll. |
+| **Kontakt** | Kontaktformular (Demo). |
+
+### 🛒 Warenkorb-System
+- Artikel werden über „In den Warenkorb" hinzugefügt.
+- Der **Warenkorb-Badge** in der Navigation zeigt die aktuelle Anzahl der Artikel an.
+- Im Warenkorb-Tab werden alle Artikel in einer **Tabelle** aufgelistet:
+  - Produktname, Menge (mit +/− Buttons), Einzelpreis, Gesamt pro Zeile.
+  - Artikel können einzeln entfernt werden.
+  - Der **Gesamtbetrag** wird automatisch berechnet.
+- Der Bestand wird **erst beim Checkout** in der Datenbank reduziert (nicht beim Hinzufügen zum Warenkorb). Das ist das Standard-E-Commerce-Verhalten.
+- Nach erfolgreichem Checkout wird der Warenkorb geleert und die Produktanzeige aktualisiert.
+
 ### Design Features (CSS)
 - **Dark-Theme & Glassmorphism:** Milchglas-Effekte (`backdrop-filter: blur()`), dunkle Hintergrundtöne und elegante violette Farbverläufe (`linear-gradient`).
 - **Schneeflocken:** Ein JavaScript-Skript erzeugt dynamisch kleine `<div>`-Elemente, die als fallende Schneeflocken animiert werden.
-- **Benachrichtigungen:** Ein eigens programmiertes "Toast"-Benachrichtigungssystem ploppt unten rechts auf, um Bestätigungen (z.B. "Erfolgreich gekauft") anzuzeigen.
+- **Benachrichtigungen:** Ein eigens programmiertes "Toast"-Benachrichtigungssystem ploppt unten rechts auf, um Bestätigungen (z.B. "Premium T-Shirt im Warenkorb") anzuzeigen.
+- **Responsive Design:** Die Produktkarten passen sich per CSS Grid automatisch an die Bildschirmbreite an.
 
 ### JavaScript Logik
-- **Tab-Navigation (`switchTab`)**: Blendet per CSS-Klasse (`display: block` vs `display: none`) zwischen Startseite, Shop und Kontaktformular hin und her.
+- **Tab-Navigation (`switchTab`)**: Blendet per CSS-Klasse (`display: block` vs `display: none`) zwischen den fünf Bereichen hin und her.
 - **Dynamisches Rendering**: Ruft `fetch('/api/products')` auf und generiert das HTML für die Artikelkarten live im Browser.
-- **Kaufen-Logik**: Sendet einen Request an `POST /api/buy/:id`, wertet die Antwort aus und aktualisiert die Stückzahl (`stock`) in Echtzeit (inklusive Farbwechsel von grün auf rot bei Ausverkauf).
+- **Warenkorb-Management**: Lokales `cart`-Array speichert alle Artikel mit Menge. Die Funktionen `addToCart()`, `removeFromCart()`, `changeQuantity()` und `renderCart()` steuern die gesamte Warenkorb-Logik clientseitig.
+- **Checkout-Logik**: Sendet den gesamten Warenkorb als `POST /api/checkout` an das Backend, das alle Bestände transaktional aktualisiert.
+- **Auth-System**: Login/Register mit JWT-Token, der im `localStorage` gespeichert wird. Eingeloggte Benutzer sehen ihren Namen in der Navigation und können das Login-Protokoll einsehen.
 
 ---
 
